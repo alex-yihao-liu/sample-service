@@ -34,7 +34,13 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build --tag $env:IMAGE_NAME .
+          docker build `
+            --tag $env:IMAGE_NAME `
+            --build-arg HTTP_PROXY=http://host.docker.internal:7890 `
+            --build-arg HTTPS_PROXY=http://host.docker.internal:7890 `
+            --build-arg http_proxy=http://host.docker.internal:7890 `
+            --build-arg https_proxy=http://host.docker.internal:7890 `
+            .
 
       - name: Load image into kind
         run: |

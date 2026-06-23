@@ -14,7 +14,15 @@ metadata:
   annotations:
     aiops.io/namespace: demo
     aiops.io/deployment: sample-service
+    github.com/project-slug: alex-yihao-liu/sample-service
+    backstage.io/source-location: url:https://github.com/alex-yihao-liu/sample-service
   links:
+    - url: https://github.com/alex-yihao-liu/sample-service
+      title: GitHub Repository
+      icon: github
+    - url: https://github.com/alex-yihao-liu/sample-service/actions
+      title: GitHub Actions
+      icon: dashboard
     - url: http://localhost:3001
       title: Grafana
       icon: dashboard
