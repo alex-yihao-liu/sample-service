@@ -18,7 +18,7 @@ jobs:
         shell: powershell
 
     env:
-      IMAGE_NAME: sample-service:local
+      IMAGE_NAME: sample-service:todo-postgres
       KIND_CLUSTER_NAME: self-healing-lab
       KUBE_CONTEXT: kind-self-healing-lab
 
