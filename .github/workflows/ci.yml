@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-test-deploy:
+    runs-on: [self-hosted, Windows, X64, aioops-local, kind]
+
+    defaults:
+      run:
+        shell: powershell
+
+    env:
+      IMAGE_NAME: sample-service:local
+      KIND_CLUSTER_NAME: self-healing-lab
+      KUBE_CONTEXT: kind-self-healing-lab
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show tool versions
+        run: |
+          docker version
+          kind version
+          kubectl version --client
+
+      - name: Build Docker image
+        run: |
+          docker build --tag $env:IMAGE_NAME .
+
+      - name: Load image into kind
+        run: |
+          kind load docker-image $env:IMAGE_NAME --name $env:KIND_CLUSTER_NAME
+
+      - name: Deploy to local Kubernetes
+        run: |
+          kubectl config use-context $env:KUBE_CONTEXT
+          kubectl apply -f D:\AIOps\kubernetes\sample-service.yaml
+          kubectl rollout restart deployment/sample-service -n demo
+          kubectl rollout status deployment/sample-service -n demo --timeout=180s
+
+      - name: Verify deployment
+        run: |
+          kubectl get pods -n demo -l app=sample-service
+          kubectl get svc -n demo sample-service
