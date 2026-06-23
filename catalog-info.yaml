@@ -16,6 +16,8 @@ metadata:
     aiops.io/deployment: sample-service
     github.com/project-slug: alex-yihao-liu/sample-service
     backstage.io/source-location: url:https://github.com/alex-yihao-liu/sample-service
+    backstage.io/kubernetes-id: sample-service
+    backstage.io/kubernetes-namespace: demo
   links:
     - url: https://github.com/alex-yihao-liu/sample-service
       title: GitHub Repository
