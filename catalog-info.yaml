@@ -1,0 +1,31 @@
+apiVersion: backstage.io/v1alpha1
+kind: System
+metadata:
+  name: self-healing-lab
+  description: Local AI-assisted incident detection and remediation lab
+spec:
+  owner: group:guests
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: sample-service
+  description: Sample service used by the AI self-healing incident lab
+  annotations:
+    aiops.io/namespace: demo
+    aiops.io/deployment: sample-service
+  links:
+    - url: http://localhost:3001
+      title: Grafana
+      icon: dashboard
+    - url: http://localhost:9090
+      title: Prometheus
+      icon: dashboard
+    - url: http://localhost:3000/incidents
+      title: Self-Healing Incidents
+      icon: dashboard
+spec:
+  type: service
+  lifecycle: experimental
+  owner: user:guest
+  system: self-healing-lab
