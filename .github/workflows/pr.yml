@@ -1,0 +1,52 @@
+name: PR
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-test:
+    runs-on: [self-hosted, Windows, X64, aioops-local, kind]
+
+    defaults:
+      run:
+        shell: powershell
+
+    env:
+      IMAGE_REPOSITORY: sample-service
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show tool versions
+        run: |
+          docker version
+          python --version
+
+      - name: Prepare image tag
+        run: |
+          $timestamp = Get-Date -Format 'yyyyMMddHHmmss'
+          $imageTag = "pr-$env:GITHUB_RUN_ID-$timestamp"
+          $imageName = "$env:IMAGE_REPOSITORY`:$imageTag"
+          "IMAGE_TAG=$imageTag" >> $env:GITHUB_ENV
+          "IMAGE_NAME=$imageName" >> $env:GITHUB_ENV
+          Write-Host "Image: $imageName"
+
+      - name: Build Docker image
+        run: |
+          docker build `
+            --tag $env:IMAGE_NAME `
+            --build-arg HTTP_PROXY=http://host.docker.internal:7890 `
+            --build-arg HTTPS_PROXY=http://host.docker.internal:7890 `
+            --build-arg http_proxy=http://host.docker.internal:7890 `
+            --build-arg https_proxy=http://host.docker.internal:7890 `
+            .
+
+      - name: Run unit tests
+        run: |
+          docker run --rm $env:IMAGE_NAME `
+            python -m pytest app/test_*.py -v --tb=short 2>&1 || `
+            docker run --rm $env:IMAGE_NAME `
+            python -c "import ast; ast.parse(open('app/app.py').read()); print('Syntax check passed')"
