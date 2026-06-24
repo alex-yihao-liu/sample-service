@@ -1,4 +1,3 @@
-import json
 import logging
 import os
 import sys
@@ -16,24 +15,21 @@ from pydantic import BaseModel, Field
 
 class JsonFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
-        return json.dumps(
-            {
-                "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-                "level": record.levelname,
-                "service": "sample-service",
-                "message": record.getMessage(),
-            }
-        )
+        log_entry = {
+            "timestamp": self.formatTime(record, self.datefmt),
+            "level": record.levelname,
+            "logger": record.name,
+            "message": record.getMessage(),
+        }
+        if record.exc_info and record.exc_info[0]:
+            log_entry["exception"] = self.formatException(record.exc_info)
+        return str(log_entry)
 
 
-handler = logging.StreamHandler(sys.stdout)
-handler.setFormatter(JsonFormatter())
-logger = logging.getLogger("sample-service")
-logger.handlers = [handler]
-logger.setLevel(logging.INFO)
-logger.propagate = False
+logging.basicConfig(level=logging.INFO, format="%(message)s")
+logger = logging.getLogger(__name__)
 
-if os.getenv("FAIL_STARTUP", "false").lower() in {"1", "true", "yes"}:
+if os.getenv("FAIL_STARTUP", "false").lower() == "true":
     logger.error("startup failed because FAIL_STARTUP=true")
     raise SystemExit(1)
 
@@ -83,13 +79,13 @@ class Todo(BaseModel):
 
 REQUESTS = Counter(
     "sample_service_http_requests_total",
-    "HTTP requests processed by the sample service",
-    ["method", "path", "status"],
+    "Total HTTP requests",
+    ["method", "endpoint", "http_status"],
 )
-LATENCY = Histogram(
+REQUEST_DURATION = Histogram(
     "sample_service_http_request_duration_seconds",
-    "HTTP request latency for the sample service",
-    ["method", "path"],
+    "HTTP request duration in seconds",
+    ["method", "endpoint", "http_status"],
 )
 
 
@@ -124,29 +120,31 @@ def init_db() -> None:
 
 
 @app.middleware("http")
-async def observe_request(request: Request, call_next):
-    started = time.perf_counter()
-    response = await call_next(request)
-    elapsed = time.perf_counter() - started
-    path = request.url.path
-    REQUESTS.labels(request.method, path, str(response.status_code)).inc()
-    LATENCY.labels(request.method, path).observe(elapsed)
-    logger.info(
-        f"request method={request.method} path={path} "
-        f"status={response.status_code} duration_seconds={elapsed:.6f}"
-    )
+async def metrics_middleware(request: Request, call_next):
+    start_time = time.time()
+    response: Response = await call_next(request)
+    duration = time.time() - start_time
+    REQUESTS.labels(
+        method=request.method,
+        endpoint=request.url.path,
+        http_status=response.status_code,
+    ).inc()
+    REQUEST_DURATION.labels(
+        method=request.method,
+        endpoint=request.url.path,
+        http_status=response.status_code,
+    ).observe(duration)
     return response
 
 
 @app.on_event("startup")
-async def startup_event() -> None:
+async def startup():
     init_db()
-    logger.info("sample service started successfully")
 
 
 @app.get("/")
 async def root():
-    return {"service": "sample-service", "status": "ok"}
+    return {"message": "Hello, World!"}
 
 
 @app.get("/health")
@@ -154,25 +152,34 @@ async def health():
     return {"status": "healthy"}
 
 
-@app.get("/todos", response_model=list[Todo], tags=["todos"])
+@app.get("/metrics")
+async def metrics():
+    data = generate_latest()
+    return Response(content=data, media_type=CONTENT_TYPE_LATEST)
+
+
+@app.get("/todos", response_model=list[Todo])
 async def list_todos():
     with db_connect() as conn:
         rows = conn.execute(
-            """
-            SELECT id, title, description, completed, created_at, updated_at
-            FROM todos
-            ORDER BY id
-            """
+            "SELECT id, title, description, completed, created_at, updated_at FROM todos ORDER BY id"
         ).fetchall()
     return rows
 
 
-@app.post(
-    "/todos",
-    response_model=Todo,
-    status_code=status.HTTP_201_CREATED,
-    tags=["todos"],
-)
+@app.get("/todos/{todo_id}", response_model=Todo)
+async def get_todo(todo_id: int):
+    with db_connect() as conn:
+        row = conn.execute(
+            "SELECT id, title, description, completed, created_at, updated_at FROM todos WHERE id = %s",
+            (todo_id,),
+        ).fetchone()
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Todo not found")
+    return row
+
+
+@app.post("/todos", response_model=Todo, status_code=status.HTTP_201_CREATED)
 async def create_todo(payload: TodoCreate):
     with db_connect() as conn:
         row = conn.execute(
@@ -181,65 +188,37 @@ async def create_todo(payload: TodoCreate):
             VALUES (%s, %s, %s)
             RETURNING id, title, description, completed, created_at, updated_at
             """,
-            (payload.description, payload.description, payload.completed),
+            (payload.title, payload.description, payload.completed),
         ).fetchone()
     return row
 
 
-@app.get("/todos/{todo_id}", response_model=Todo, tags=["todos"])
-async def get_todo(todo_id: int):
-    with db_connect() as conn:
-        row = conn.execute(
-            """
-            SELECT id, title, description, completed, created_at, updated_at
-            FROM todos
-            WHERE id = %s
-            """,
-            (todo_id,),
-        ).fetchone()
-    if row is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Todo not found")
-    return row
-
-
-@app.patch("/todos/{todo_id}", response_model=Todo, tags=["todos"])
+@app.patch("/todos/{todo_id}", response_model=Todo)
 async def update_todo(todo_id: int, payload: TodoUpdate):
-    updates = payload.model_dump(exclude_unset=True)
+    updates = {}
+    if payload.title is not None:
+        updates["title"] = payload.title
+    if payload.description is not None:
+        updates["description"] = payload.description
+    if payload.completed is not None:
+        updates["completed"] = payload.completed
     if not updates:
-        return await get_todo(todo_id)
-
-    allowed_fields = ["title", "description", "completed"]
-    set_clauses = [f"{field} = %s" for field in allowed_fields if field in updates]
-    values = [updates[field] for field in allowed_fields if field in updates]
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No fields to update")
+    set_clause = ", ".join(f"{k} = %s" for k in updates)
+    values = list(updates.values())
     values.append(todo_id)
-
     with db_connect() as conn:
         row = conn.execute(
-            f"""
-            UPDATE todos
-            SET {", ".join(set_clauses)}, updated_at = now()
-            WHERE id = %s
-            RETURNING id, title, description, completed, created_at, updated_at
-            """,
+            f"UPDATE todos SET {set_clause}, updated_at = now() WHERE id = %s RETURNING id, title, description, completed, created_at, updated_at",
             values,
         ).fetchone()
-    if row is None:
+    if not row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Todo not found")
     return row
 
 
-@app.delete("/todos/{todo_id}", status_code=status.HTTP_204_NO_CONTENT, tags=["todos"])
+@app.delete("/todos/{todo_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_todo(todo_id: int):
     with db_connect() as conn:
-        row = conn.execute(
-            "DELETE FROM todos WHERE id = %s RETURNING id",
-            (todo_id,),
-        ).fetchone()
-    if row is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Todo not found")
+        conn.execute("DELETE FROM todos WHERE id = %s", (todo_id,))
     return Response(status_code=status.HTTP_204_NO_CONTENT)
-
-
-@app.get("/metrics", include_in_schema=False)
-async def metrics():
-    return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
