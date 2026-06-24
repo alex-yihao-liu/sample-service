@@ -18,7 +18,7 @@ jobs:
         shell: powershell
 
     env:
-      IMAGE_NAME: sample-service:todo-postgres
+      IMAGE_REPOSITORY: sample-service
       KIND_CLUSTER_NAME: self-healing-lab
       KUBE_CONTEXT: kind-self-healing-lab
 
@@ -31,6 +31,16 @@ jobs:
           docker version
           kind version
           kubectl version --client
+
+      - name: Prepare image tag
+        run: |
+          $timestamp = Get-Date -Format 'yyyyMMddHHmmss'
+          $imageTag = "build-$env:GITHUB_RUN_NUMBER-$env:GITHUB_RUN_ATTEMPT-$timestamp"
+          $imageName = "$env:IMAGE_REPOSITORY`:$imageTag"
+          "IMAGE_TAG=$imageTag" >> $env:GITHUB_ENV
+          "IMAGE_NAME=$imageName" >> $env:GITHUB_ENV
+          "BUILD_ID=$env:GITHUB_RUN_ID-$env:GITHUB_RUN_ATTEMPT" >> $env:GITHUB_ENV
+          Write-Host "Image: $imageName"
 
       - name: Build Docker image
         run: |
@@ -50,10 +60,19 @@ jobs:
         run: |
           kubectl config use-context $env:KUBE_CONTEXT
           kubectl apply -f D:\AIOps\kubernetes\sample-service.yaml
-          kubectl rollout restart deployment/sample-service -n demo
+          kubectl set image deployment/sample-service sample-service=$env:IMAGE_NAME -n demo
+          kubectl annotate deployment/sample-service -n demo `
+            aiops.io/build-id=$env:BUILD_ID `
+            aiops.io/image-tag=$env:IMAGE_TAG `
+            aiops.io/github-run-id=$env:GITHUB_RUN_ID `
+            aiops.io/github-run-number=$env:GITHUB_RUN_NUMBER `
+            aiops.io/github-sha=$env:GITHUB_SHA `
+            --overwrite
           kubectl rollout status deployment/sample-service -n demo --timeout=180s
 
       - name: Verify deployment
         run: |
+          kubectl get deployment/sample-service -n demo -o jsonpath="{.spec.template.spec.containers[0].image}"
+          Write-Host ""
           kubectl get pods -n demo -l app=sample-service
           kubectl get svc -n demo sample-service
