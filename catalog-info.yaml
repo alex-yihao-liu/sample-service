@@ -18,6 +18,7 @@ metadata:
     backstage.io/source-location: url:https://github.com/alex-yihao-liu/sample-service
     backstage.io/kubernetes-id: sample-service
     backstage.io/kubernetes-namespace: demo
+    jira.com/project-key: AIOPS
   links:
     - url: https://github.com/alex-yihao-liu/sample-service
       title: GitHub Repository
@@ -32,7 +33,7 @@ metadata:
       title: Prometheus
       icon: dashboard
     - url: http://localhost:3000/incidents
-      title: Self-Healing Incidents
+      title: Incident Manager
       icon: dashboard
     - url: http://localhost:8000/docs
       title: Todo API Swagger

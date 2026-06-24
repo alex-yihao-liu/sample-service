@@ -181,7 +181,7 @@ async def create_todo(payload: TodoCreate):
             VALUES (%s, %s, %s)
             RETURNING id, title, description, completed, created_at, updated_at
             """,
-            (payload.title, payload.description, payload.completed),
+            (payload.description, payload.description, payload.completed),
         ).fetchone()
     return row
 
