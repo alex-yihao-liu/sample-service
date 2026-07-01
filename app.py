@@ -188,6 +188,7 @@ async def create_todo(payload: TodoCreate):
 
 @app.get("/todos/{todo_id}", response_model=Todo, tags=["todos"])
 async def get_todo(todo_id: int):
+    print("Only for testing")
     with db_connect() as conn:
         row = conn.execute(
             """
