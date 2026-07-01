@@ -1,6 +1,6 @@
 name: CI
 
-on:
+"on":
   push:
     branches:
       - main
@@ -16,7 +16,13 @@ jobs:
 
     env:
       REGISTRY: 192.168.1.222:30500
+      APP_NAME: sample-service
       IMAGE_REPOSITORY: sample-service
+      IMAGE_TAG_PREFIX: build
+      K8S_NAMESPACE: demo
+      K8S_DEPLOYMENT: sample-service
+      K8S_CONTAINER: sample-service
+      K8S_MANIFEST: D:\AIOps\k8s\apps\sample-service\sample-service.yaml
       KUBE_CONTEXT: default
       EXPECTED_KUBE_SERVER: https://192.168.1.222:6443
 
@@ -44,12 +50,10 @@ jobs:
       - name: Prepare image tag
         run: |
           $timestamp = Get-Date -Format 'yyyyMMddHHmmss'
-          $imageTag = "build-$env:GITHUB_RUN_NUMBER-$env:GITHUB_RUN_ATTEMPT-$timestamp"
+          $imageTag = "$env:IMAGE_TAG_PREFIX-$env:GITHUB_RUN_NUMBER-$env:GITHUB_RUN_ATTEMPT-$timestamp"
           $imageName = "$env:REGISTRY/$env:IMAGE_REPOSITORY`:$imageTag"
-          $stableImageName = "$env:REGISTRY/$env:IMAGE_REPOSITORY`:todo-postgres"
           "IMAGE_TAG=$imageTag" >> $env:GITHUB_ENV
           "IMAGE_NAME=$imageName" >> $env:GITHUB_ENV
-          "STABLE_IMAGE_NAME=$stableImageName" >> $env:GITHUB_ENV
           "BUILD_ID=$env:GITHUB_RUN_ID-$env:GITHUB_RUN_ATTEMPT" >> $env:GITHUB_ENV
           Write-Host "Image: $imageName"
 
@@ -57,30 +61,28 @@ jobs:
         run: |
           docker build `
             --tag $env:IMAGE_NAME `
-            --tag $env:STABLE_IMAGE_NAME `
             .
 
       - name: Push Docker image to 222 registry
         run: |
           docker push $env:IMAGE_NAME
-          docker push $env:STABLE_IMAGE_NAME
 
       - name: Deploy to 222 Kubernetes
         run: |
-          kubectl --context $env:KUBE_CONTEXT apply -f D:\AIOps\kubernetes\sample-service.yaml
-          kubectl --context $env:KUBE_CONTEXT set image deployment/sample-service sample-service=$env:IMAGE_NAME -n demo
-          kubectl --context $env:KUBE_CONTEXT annotate deployment/sample-service -n demo `
+          kubectl --context $env:KUBE_CONTEXT apply -f $env:K8S_MANIFEST
+          kubectl --context $env:KUBE_CONTEXT set image deployment/$env:K8S_DEPLOYMENT $env:K8S_CONTAINER=$env:IMAGE_NAME -n $env:K8S_NAMESPACE
+          kubectl --context $env:KUBE_CONTEXT annotate deployment/$env:K8S_DEPLOYMENT -n $env:K8S_NAMESPACE `
             aiops.io/build-id=$env:BUILD_ID `
             aiops.io/image-tag=$env:IMAGE_TAG `
             aiops.io/github-run-id=$env:GITHUB_RUN_ID `
             aiops.io/github-run-number=$env:GITHUB_RUN_NUMBER `
             aiops.io/github-sha=$env:GITHUB_SHA `
             --overwrite
-          kubectl --context $env:KUBE_CONTEXT rollout status deployment/sample-service -n demo --timeout=180s
+          kubectl --context $env:KUBE_CONTEXT rollout status deployment/$env:K8S_DEPLOYMENT -n $env:K8S_NAMESPACE --timeout=180s
 
       - name: Verify deployment
         run: |
-          kubectl --context $env:KUBE_CONTEXT get deployment/sample-service -n demo -o jsonpath="{.spec.template.spec.containers[0].image}"
+          kubectl --context $env:KUBE_CONTEXT get deployment/$env:K8S_DEPLOYMENT -n $env:K8S_NAMESPACE -o jsonpath="{.spec.template.spec.containers[0].image}"
           Write-Host ""
-          kubectl --context $env:KUBE_CONTEXT get pods -n demo -l app=sample-service
-          kubectl --context $env:KUBE_CONTEXT get svc -n demo sample-service
+          kubectl --context $env:KUBE_CONTEXT get pods -n $env:K8S_NAMESPACE -l app=$env:APP_NAME
+          kubectl --context $env:KUBE_CONTEXT get svc -n $env:K8S_NAMESPACE $env:APP_NAME

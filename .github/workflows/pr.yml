@@ -1,6 +1,6 @@
 name: PR
 
-on:
+"on":
   pull_request:
     branches:
       - main
@@ -47,6 +47,9 @@ jobs:
       - name: Run unit tests
         run: |
           docker run --rm $env:IMAGE_NAME `
-            python -m pytest app/test_*.py -v --tb=short 2>&1 || `
+            python -m pytest app/test_*.py -v --tb=short 2>&1
+
+          if ($LASTEXITCODE -ne 0) {
             docker run --rm $env:IMAGE_NAME `
-            python -c "import ast; ast.parse(open('app/app.py').read()); print('Syntax check passed')"
+              python -c "import ast; ast.parse(open('app/app.py').read()); print('Syntax check passed')"
+          }
