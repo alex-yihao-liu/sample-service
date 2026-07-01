@@ -7,7 +7,7 @@ name: PR
 
 jobs:
   build-test:
-    runs-on: [self-hosted, Windows, X64, aioops-local, kind]
+    runs-on: [self-hosted, Windows, X64]
 
     defaults:
       run:
