@@ -10,7 +10,7 @@ apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
   name: sample-service
-  description: Sample service used by the AI self-healing incident lab
+  description: .NET eShop API used by the AIOps incident lab
   annotations:
     aiops.io/namespace: demo
     aiops.io/deployment: sample-service
@@ -35,8 +35,8 @@ metadata:
     - url: http://localhost:3000/incidents
       title: Incident Manager
       icon: dashboard
-    - url: http://localhost:8000/docs
-      title: Todo API Swagger
+    - url: http://api.192.168.1.222.nip.io/openapi.json
+      title: eShop API
       icon: docs
 spec:
   type: service
@@ -44,13 +44,13 @@ spec:
   owner: user:guest
   system: self-healing-lab
   providesApis:
-    - sample-service-todo-api
+    - sample-service-shop-api
 ---
 apiVersion: backstage.io/v1alpha1
 kind: API
 metadata:
-  name: sample-service-todo-api
-  description: Todo List CRUD API exposed by sample-service
+  name: sample-service-shop-api
+  description: Product, cart and order API exposed by sample-service
 spec:
   type: openapi
   lifecycle: experimental

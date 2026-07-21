@@ -37,6 +37,10 @@ jobs:
 
       - name: Verify 222 access
         run: |
+          if ($env:KUBE_CONTEXT -match "(?i)aks|uat") {
+            throw "Refusing to operate on AKS/UAT context '$env:KUBE_CONTEXT'."
+          }
+
           $server = kubectl --context $env:KUBE_CONTEXT config view --minify -o jsonpath="{.clusters[0].cluster.server}"
           if ($server -ne $env:EXPECTED_KUBE_SERVER) {
             throw "Refusing to deploy to '$server'. Expected '$env:EXPECTED_KUBE_SERVER'."
@@ -45,6 +49,15 @@ jobs:
           $registryHealth = Invoke-WebRequest -UseBasicParsing -Uri "http://$env:REGISTRY/v2/" -TimeoutSec 10
           if ($registryHealth.StatusCode -ne 200) {
             throw "Registry health check failed with status $($registryHealth.StatusCode)."
+          }
+
+      - name: Verify Docker registry access
+        run: |
+          $indexConfigs = docker info --format '{{json .RegistryConfig.IndexConfigs}}' | ConvertFrom-Json
+          $registryConfig = $indexConfigs.PSObject.Properties[$env:REGISTRY].Value
+          if (-not $registryConfig -or $registryConfig.Secure -ne $false) {
+            docker info
+            throw "Docker daemon is not configured to push to the HTTP registry $env:REGISTRY. Add it to Docker insecure-registries on the self-hosted runner."
           }
 
       - name: Prepare image tag
@@ -65,7 +78,18 @@ jobs:
 
       - name: Push Docker image to 222 registry
         run: |
-          docker push $env:IMAGE_NAME
+          for ($attempt = 1; $attempt -le 3; $attempt++) {
+            docker push $env:IMAGE_NAME
+            if ($LASTEXITCODE -eq 0) {
+              break
+            }
+
+            if ($attempt -eq 3) {
+              throw "docker push failed after $attempt attempts."
+            }
+
+            Start-Sleep -Seconds (10 * $attempt)
+          }
 
       - name: Deploy to 222 Kubernetes
         run: |

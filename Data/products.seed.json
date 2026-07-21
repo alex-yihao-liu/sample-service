@@ -1,0 +1,8 @@
+[
+  { "Id": 1, "Name": "Wanderer Black Hiking Boots", "Type": "Footwear", "Brand": "Daybird", "Description": "Daybird's Wanderer Hiking Boots in sleek black are perfect for all your outdoor adventures.", "Price": 109.99 },
+  { "Id": 2, "Name": "Summit Pro Harness", "Type": "Climbing", "Brand": "Gravitator", "Description": "Conquer new heights with the Summit Pro Harness by Gravitator.", "Price": 89.99 },
+  { "Id": 3, "Name": "Alpine Fusion Goggles", "Type": "Ski/boarding", "Brand": "WildRunner", "Description": "Enhance your skiing experience with the Alpine Fusion Goggles from WildRunner.", "Price": 79.99 },
+  { "Id": 4, "Name": "Expedition Backpack", "Type": "Bags", "Brand": "Quester", "Description": "The Expedition Backpack by Quester is a must-have for every outdoor enthusiast.", "Price": 129.99 },
+  { "Id": 5, "Name": "Blizzard Rider Snowboard", "Type": "Ski/boarding", "Brand": "B&R", "Description": "Get ready to ride the slopes with the Blizzard Rider Snowboard.", "Price": 299.99 },
+  { "Id": 6, "Name": "Carbon Fiber Trekking Poles", "Type": "Trekking", "Brand": "Raptor Elite", "Description": "The Carbon Fiber Trekking Poles by Raptor Elite are the ultimate companion for your hiking adventures.", "Price": 69.99 }
+]
