@@ -4,5 +4,12 @@
   { "Id": 3, "Name": "Alpine Fusion Goggles", "Type": "Ski/boarding", "Brand": "WildRunner", "Description": "Enhance your skiing experience with the Alpine Fusion Goggles from WildRunner.", "Price": 79.99 },
   { "Id": 4, "Name": "Expedition Backpack", "Type": "Bags", "Brand": "Quester", "Description": "The Expedition Backpack by Quester is a must-have for every outdoor enthusiast.", "Price": 129.99 },
   { "Id": 5, "Name": "Blizzard Rider Snowboard", "Type": "Ski/boarding", "Brand": "B&R", "Description": "Get ready to ride the slopes with the Blizzard Rider Snowboard.", "Price": 299.99 },
-  { "Id": 6, "Name": "Carbon Fiber Trekking Poles", "Type": "Trekking", "Brand": "Raptor Elite", "Description": "The Carbon Fiber Trekking Poles by Raptor Elite are the ultimate companion for your hiking adventures.", "Price": 69.99 }
+  { "Id": 6, "Name": "Carbon Fiber Trekking Poles", "Type": "Trekking", "Brand": "Raptor Elite", "Description": "The Carbon Fiber Trekking Poles by Raptor Elite are the ultimate companion for your hiking adventures.", "Price": 69.99 },
+  { "Id": 7, "Name": "Trail Breeze Running Shoes", "Type": "Footwear", "Brand": "Daybird", "Description": "Lightweight trail shoes with a durable outsole for mixed terrain.", "Price": 84.99 },
+  { "Id": 8, "Name": "Granite Lock Carabiner Set", "Type": "Climbing", "Brand": "Gravitator", "Description": "A set of three locking carabiners for climbing and rope systems.", "Price": 34.99 },
+  { "Id": 9, "Name": "Powder Line Ski Helmet", "Type": "Ski/boarding", "Brand": "WildRunner", "Description": "A ventilated snow helmet with an adjustable fit system.", "Price": 119.99 },
+  { "Id": 10, "Name": "Urban Trek Daypack", "Type": "Bags", "Brand": "Quester", "Description": "A compact daypack with hydration compatibility and a laptop sleeve.", "Price": 64.99 },
+  { "Id": 11, "Name": "All Terrain Hiking Gaiters", "Type": "Trekking", "Brand": "Raptor Elite", "Description": "Water-resistant gaiters that keep mud, stones, and snow out of your boots.", "Price": 39.99 },
+  { "Id": 12, "Name": "Two Person Ridge Tent", "Type": "Camping", "Brand": "Northstar", "Description": "A lightweight two-person tent designed for quick three-season setup.", "Price": 189.99 },
+  { "Id": 13, "Name": "Compact Camp Cook Set", "Type": "Camping", "Brand": "Northstar", "Description": "A nesting cook set with a pot, pan, two bowls, and folding utensils.", "Price": 49.99 }
 ]

@@ -41,6 +41,12 @@ app.MapGet("/metrics", (ShopStore store) => Results.Text(
     "text/plain; version=0.0.4; charset=utf-8"));
 
 app.MapGet("/api/products", (ShopStore store, string? type) => Results.Ok(store.GetProducts(type)));
+app.MapGet("/api/categories", (ShopStore store) => Results.Ok(
+    store.GetProducts(null)
+        .Select(product => product.Type)
+        .Where(type => !string.IsNullOrWhiteSpace(type))
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .OrderBy(type => type)));
 app.MapGet("/api/products/{id:int}", (int id, ShopStore store) =>
     store.GetProduct(id) is { } product ? Results.Ok(product) : Results.NotFound());
 app.MapGet("/api/cart", (string? userId, ShopStore store) => Results.Ok(store.GetCart(userId ?? "guest")));
@@ -82,6 +88,7 @@ app.MapGet("/openapi.json", () => Results.Ok(new
     paths = new Dictionary<string, object>
     {
         ["/api/health"] = new { get = new { summary = "API health" } },
+        ["/api/categories"] = new { get = new { summary = "List product categories" } },
         ["/api/products"] = new { get = new { summary = "List products" } },
         ["/api/products/{id}"] = new { get = new { summary = "Get product" } },
         ["/api/cart"] = new { get = new { summary = "Get cart" }, post = new { summary = "Add product to cart" } },
