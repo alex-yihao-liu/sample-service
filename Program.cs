@@ -10,6 +10,12 @@ var builder = WebApplication.CreateBuilder(args);
 var allowedOrigins = (Environment.GetEnvironmentVariable("CORS_ALLOW_ORIGINS") ?? "")
     .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
+// Ensure the eShop frontend origin is always included in the allowed list
+if (allowedOrigins.Length > 0 && !allowedOrigins.Contains("http://eshop.192.168.1.222.nip.io"))
+{
+    allowedOrigins = allowedOrigins.Append("http://eshop.192.168.1.222.nip.io").ToArray();
+}
+
 builder.Services.AddCors(options => options.AddDefaultPolicy(policy =>
 {
     if (allowedOrigins.Length == 0)
