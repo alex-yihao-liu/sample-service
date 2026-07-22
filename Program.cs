@@ -8,7 +8,10 @@ if (string.Equals(Environment.GetEnvironmentVariable("FAIL_STARTUP"), "true", St
 
 var builder = WebApplication.CreateBuilder(args);
 var allowedOrigins = (Environment.GetEnvironmentVariable("CORS_ALLOW_ORIGINS") ?? "")
-    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+    .Append("http://eshop.192.168.1.222.nip.io")
+    .Distinct()
+    .ToArray();
 
 builder.Services.AddCors(options => options.AddDefaultPolicy(policy =>
 {
